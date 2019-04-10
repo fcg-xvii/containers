@@ -35,3 +35,18 @@ func (s *Stack) String() string {
 	res += "=====\n"
 	return res
 }
+
+func (s *Stack) PopAll() []interface{} {
+	res := s.list
+	s.list = s.list[:0]
+	return res
+}
+
+func (s *Stack) PopAllReverse() []interface{} {
+	res := make([]interface{}, len(s.list))
+	for i := 0; i < len(s.list); i++ {
+		res[i] = len(s.list) - i - 1
+	}
+	s.list = s.list[:0]
+	return res
+}

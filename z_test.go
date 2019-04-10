@@ -26,4 +26,11 @@ func TestStack(t *testing.T) {
 	}
 	t.Log("Test pop nil item")
 	t.Log(stack.Pop())
+	t.Log("Test pop all")
+	stack.Push(0, 1, 2, 3, 4, 5)
+	t.Log(stack.PopAll())
+	t.Log(stack)
+	stack.Push(0, 1, 2, 3, 4, 5)
+	t.Log(stack.PopAllReverse())
+	t.Log(stack)
 }
