@@ -42,11 +42,26 @@ func (s *Stack) PopAll() []interface{} {
 	return res
 }
 
+func (s *Stack) PopAllIndex(index int) []interface{} {
+	res := s.list[index:]
+	s.list = s.list[:index]
+	return res
+}
+
 func (s *Stack) PopAllReverse() []interface{} {
 	res := make([]interface{}, len(s.list))
 	for i := 0; i < len(s.list); i++ {
 		res[i] = s.list[len(s.list)-i-1]
 	}
 	s.list = s.list[:0]
+	return res
+}
+
+func (s *Stack) PopAllReverseIndex(index int) []interface{} {
+	res := make([]interface{}, len(s.list)-index)
+	for i := 0; i < len(s.list)-index; i++ {
+		res[i] = s.list[len(s.list)-i-1]
+	}
+	s.list = s.list[:index]
 	return res
 }

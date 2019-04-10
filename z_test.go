@@ -33,4 +33,7 @@ func TestStack(t *testing.T) {
 	stack.Push(0, 1, 2, 3, 4, 5)
 	t.Log(stack.PopAllReverse())
 	t.Log(stack)
+	stack.Push(0, 1, 2, 3, 4, 5)
+	t.Log(stack.PopAllReverseIndex(2))
+	t.Log(stack)
 }
