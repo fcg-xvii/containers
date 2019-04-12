@@ -109,6 +109,7 @@ func (s *cache) runCleaner() {
 	}
 }
 
+// Возвращает количество элементов в хранилище хэша
 func (s *cache) Len() int {
 	s.locker.RLock()
 	res := len(s.items)
