@@ -109,6 +109,13 @@ func (s *cache) runCleaner() {
 	}
 }
 
+func (s *cache) Len() int {
+	s.locker.RLock()
+	res := len(s.items)
+	s.locker.RUnlock()
+	return res
+}
+
 // Деструктор, вызываемый сборщиком мусора
 func destroyCache(cache *Cache) {
 	close(cache.stopCleanerChan) // Канал передаст сигнал о своём закрытии клинеру, который закроется, если он запущен
