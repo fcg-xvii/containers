@@ -6,6 +6,13 @@ type Stack struct {
 	list []interface{}
 }
 
+func (s *Stack) Peek() interface{} {
+	if len(s.list) > 0 {
+		return s.list[len(s.list)-1]
+	}
+	return nil
+}
+
 func (s *Stack) Push(vals ...interface{}) {
 	s.list = append(s.list, vals...)
 }
