@@ -53,7 +53,7 @@ func (s *cache) Set(key, value interface{}) {
 	s.locker.Unlock()
 }
 
-// Поиск объекта по ключу
+// Поиск объекта по ключу. Если объект найден, увелививается его "время жизни"
 func (s *cache) Get(key interface{}) (res interface{}, check bool) {
 	s.locker.RLock()
 	var item *cacheItem
@@ -65,6 +65,7 @@ func (s *cache) Get(key interface{}) (res interface{}, check bool) {
 }
 
 // Поиск объекта по другим признакам, кроме ключа (каким именно, определяется методом - агрументом на вход)
+// "Время жизни" найденного объекта увеличивается.
 func (s *cache) Search(method SearchMethod) (res interface{}, check bool) {
 	s.locker.RLock()
 	for i, v := range s.items {
