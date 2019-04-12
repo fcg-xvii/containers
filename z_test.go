@@ -1,8 +1,6 @@
 package containers
 
 import (
-	"fmt"
-	"runtime"
 	"testing"
 	"time"
 )
@@ -13,7 +11,7 @@ type cacheStruct struct {
 }
 
 var (
-	cache = NewCache(time.Second*10, time.Second*30)
+	cacher = NewCache(time.Second*10, time.Second*30)
 )
 
 func TestStack(t *testing.T) {
@@ -61,12 +59,12 @@ func searchInCache(field interface{}) (res interface{}, check bool) {
 	switch field.(type) {
 	case int:
 		id := field.(int)
-		return cache.Search(func(key, item interface{}) (vCheck bool) {
+		return cacher.Search(func(key, item interface{}) (vCheck bool) {
 			return item.(*cacheStruct).id == id
 		})
 	case string:
 		name := field.(string)
-		return cache.Search(func(key, item interface{}) (vCheck bool) {
+		return cacher.Search(func(key, item interface{}) (vCheck bool) {
 			return item.(*cacheStruct).name == name
 		})
 	}
@@ -75,17 +73,11 @@ func searchInCache(field interface{}) (res interface{}, check bool) {
 
 func TestCache(t *testing.T) {
 	t.Log("Set cache test")
-	//cache.Set("te", &cacheStruct{10, "ten"})
-	//cache.Set("le", &cacheStruct{11, "elleven"})
-	t.Log(cache.items)
+	cacher.Set("te", &cacheStruct{10, "ten"})
+	cacher.Set("le", &cacheStruct{11, "elleven"})
+	t.Log(cacher.items)
 	t.Log("Get cache test")
-	//t.Log(cache.Get("ten"))
+	t.Log(cacher.Get("ten"))
 	t.Log("Search test")
-	//t.Log(searchInCache(10))
-	for {
-		cache = nil
-		time.Sleep(time.Second * 10)
-		fmt.Println("GC")
-		runtime.GC()
-	}
+	t.Log(searchInCache(10))
 }
