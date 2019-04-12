@@ -79,12 +79,12 @@ func (s *cache) Search(method SearchMethod) (res interface{}, check bool) {
 	return
 }
 
-// Запуск клинера (запускается при непустой карте объектов)
+// Запуск клинера (запускается при непустой карте объектов и останавливается при пустой)
 func (s *cache) runCleaner() {
 	ticker := time.NewTicker(s.interval)
 	for {
 		select {
-		case <-ticker.C:
+		case <-ticker.C: // По сигналу тикера начинаем удаление устаревших объектов
 			now := time.Now().UnixNano()
 			s.locker.Lock()
 			for key, v := range s.items {
@@ -92,6 +92,7 @@ func (s *cache) runCleaner() {
 					delete(s.items, key)
 				}
 			}
+			// Если карта объектов пуста, завершаем работу клинерв
 			if len(s.items) == 0 {
 				s.cleanerWork = false
 				ticker.Stop()
@@ -99,7 +100,7 @@ func (s *cache) runCleaner() {
 				return
 			}
 			s.locker.Unlock()
-		case <-s.stopCleanerChan: // Деструктор, запущеный сборщиком мусора, закрыл канал, поэтому завершаем работу клинера
+		case <-s.stopCleanerChan: // Деструктор, запущеный сборщиком мусора, закрывает канал, завершаем работу клинера
 			s.cleanerWork = false
 			ticker.Stop()
 			return
