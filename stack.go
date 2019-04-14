@@ -52,14 +52,16 @@ func (s *Stack) String() string {
 
 // Забирает весь стек и возвращает его элементы в срезе
 func (s *Stack) PopAll() []interface{} {
-	res := s.list
+	res := make([]interface{}, len(s.list))
+	copy(res, s.list)
 	s.list = s.list[:0]
 	return res
 }
 
 // Забирает стек до индекса (если в стеке, например, 5 элементов, индекс = 2, из стека будет взято 3 элемента)
 func (s *Stack) PopAllIndex(index int) []interface{} {
-	res := s.list[index:]
+	res := make([]interface{}, len(s.list)-index)
+	copy(res, s.list[index:])
 	s.list = s.list[:index]
 	return res
 }
