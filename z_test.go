@@ -80,4 +80,10 @@ func TestCache(t *testing.T) {
 	t.Log(cacher.Get("ten"))
 	t.Log("Search test")
 	t.Log(searchInCache(10))
+
+	for i := 0; i < 500; i++ {
+		go func() {
+			cacher.Get("te")
+		}()
+	}
 }

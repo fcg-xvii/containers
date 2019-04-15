@@ -3,6 +3,7 @@ package containers
 import (
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -61,7 +62,8 @@ func (s *cache) Get(key interface{}) (res interface{}, check bool) {
 	s.locker.RLock()
 	var item *cacheItem
 	if item, check = s.items[key]; check {
-		res, item.expire = item.object, time.Now().Add(s.expired).UnixNano()
+		res = item.object
+		atomic.AddInt64(&item.expire, int64(s.expired))
 	}
 	s.locker.RUnlock()
 	return
