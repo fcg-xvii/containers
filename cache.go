@@ -121,8 +121,10 @@ func (s *cache) Len() int {
 }
 
 func (s *cache) LockedLoad(key interface{}, callback func() (interface{}, bool)) (item interface{}, check bool) {
+	var cItem *cacheItem
 	s.locker.Lock()
-	if item, check = s.items[key]; check {
+	if cItem, check = s.items[key]; check {
+		item = cItem.object
 		s.locker.Unlock()
 		return
 	}
