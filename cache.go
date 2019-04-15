@@ -133,6 +133,12 @@ func (s *cache) LockedLoad(key interface{}, callback func() (interface{}, bool))
 	return
 }
 
+func (s *cache) Delete(key interface{}) {
+	s.locker.Lock()
+	delete(s.items, key)
+	s.locker.Unlock()
+}
+
 // Деструктор, вызываемый сборщиком мусора
 func destroyCache(cache *Cache) {
 	close(cache.stopCleanerChan) // Канал передаст сигнал о своём закрытии клинеру, который закроется, если он запущен
