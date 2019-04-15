@@ -126,7 +126,9 @@ func (s *cache) LockedLoad(key interface{}, callback func() (interface{}, bool))
 		s.locker.Unlock()
 		return
 	}
-	item, check = callback()
+	if item, check = callback(); check {
+		s.items[key] = &cacheItem{item, time.Now().Add(s.expired).UnixNano()}
+	}
 	s.locker.Unlock()
 	return
 }
