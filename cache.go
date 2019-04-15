@@ -9,6 +9,9 @@ import (
 // Шаблон функции для использования при необходимости поиска объекта по отличным от ключа полям
 type SearchMethod func(key, item interface{}) bool
 
+// Шаблон функции для случаев, когда необходимо установить объект кэша, при этом быть уверенным, что его в карте нет
+type LockedLoadMethod func(key interface{}, callback func() (interface{}, bool)) (item, check interface{})
+
 // Структура для хранения элементов
 type cacheItem struct {
 	object interface{} // Исходный объект
@@ -115,6 +118,17 @@ func (s *cache) Len() int {
 	res := len(s.items)
 	s.locker.RUnlock()
 	return res
+}
+
+func (s *cache) LockedLoad(key interface{}, callback func() (interface{}, bool)) (item interface{}, check bool) {
+	s.locker.Lock()
+	if item, check = s.items[key]; check {
+		s.locker.Unlock()
+		return
+	}
+	item, check = callback()
+	s.locker.Unlock()
+	return
 }
 
 // Деструктор, вызываемый сборщиком мусора
