@@ -38,6 +38,6 @@ func (s *FileList) Get(index int) (interface{}, error) {
 		s.locker.RUnlock()
 		return nil, err
 	} else {
-
+		
 	}
 }
