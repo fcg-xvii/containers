@@ -1,6 +1,7 @@
 package containers
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -86,4 +87,12 @@ func TestCache(t *testing.T) {
 			cacher.Get("te")
 		}()
 	}
+}
+
+func TestFile(t *testing.T) {
+	l := int64(10)
+	r := int64(100)
+	t.Log(l, r)
+	t.Log(atomic.CompareAndSwapInt64(&l, l, r))
+	t.Log(l, l)
 }
