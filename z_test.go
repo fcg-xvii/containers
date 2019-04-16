@@ -1,7 +1,6 @@
 package containers
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -12,7 +11,21 @@ type cacheStruct struct {
 }
 
 var (
-	cacher = NewCache(time.Second*10, time.Second*30)
+	cacher       = NewCache(time.Second*10, time.Second*30)
+	listCallback = func(src []byte, store func(interface{})) error {
+		for i := 0; i < 10; i++ {
+			store(i)
+		}
+		return nil
+	}
+	mapCallback = func(src []byte, store func(interface{}, interface{})) error {
+		for i := 0; i < 100000; i++ {
+			store(i, i+1)
+		}
+		return nil
+	}
+	fileList = NewFileList("z-content", listCallback)
+	fileMap  = NewFileMap("z-content", mapCallback)
 )
 
 func TestStack(t *testing.T) {
@@ -90,9 +103,32 @@ func TestCache(t *testing.T) {
 }
 
 func TestFile(t *testing.T) {
-	l := int64(10)
-	r := int64(100)
-	t.Log(l, r)
-	t.Log(atomic.CompareAndSwapInt64(&l, l, r))
-	t.Log(l, l)
+	//t.Log(list.Len())
+	//t.Log(f.Len())
+
+	for i := 0; i < 500; i++ {
+		go func() {
+			fileList.Get(1)
+		}()
+	}
+	time.Sleep(time.Second)
+	t.Log(fileMap.Len())
+}
+
+func BenchmarkListFile(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		fileList.Len()
+	}
+}
+
+func BenchmarkMapFile(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		fileMap.Len()
+	}
+}
+
+func BenchmarkMapFileRead(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		fileMap.Get(500)
+	}
 }

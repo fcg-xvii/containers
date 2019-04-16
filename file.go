@@ -1,43 +1,127 @@
 package containers
 
 import (
-	"errors"
+	"io/ioutil"
 	"os"
 	"sync"
+	"sync/atomic"
 )
 
-var (
-	errOutOfRange = errors.New("Index out of range")
-)
+type FileListCallback func([]byte, func(interface{})) error
+type FileMapCallback func([]byte, func(interface{}, interface{})) error
 
-type File struct {
-	path     string
-	modified int64
-	locker   *sync.RWMutex
+type file struct {
+	path        string
+	modified    int64
+	locker      *sync.RWMutex
+	parseMethod func([]byte) error
 }
 
-func (s *File) checkModified() (bool, error) {
-	if info, err := os.Stat(s.path); err != nil {
-		return false, err
-	} else {
-		return info.ModTime().UnixNano() == s.modified, nil
+func (s *file) update() error {
+	info, err := os.Stat(s.path)
+	if err != nil {
+		return err
 	}
+	if atomic.LoadInt64(&s.modified) != info.ModTime().UnixNano() {
+		s.locker.Lock()
+		if s.modified == info.ModTime().UnixNano() {
+			s.locker.Unlock()
+			return nil
+		}
+		var src []byte
+		if src, err = ioutil.ReadFile(s.path); err == nil {
+			if err = s.parseMethod(src); err == nil {
+				atomic.StoreInt64(&s.modified, info.ModTime().UnixNano())
+			}
+		}
+		s.locker.Unlock()
+		return err
+	}
+	return nil
+}
+
+////////////////////////////////////////////////////////////////////////////
+
+func NewFileList(path string, parseCallback FileListCallback) *FileList {
+	f := &FileList{parseCallback: parseCallback}
+	f.file = &file{path: path, locker: new(sync.RWMutex), parseMethod: f.parse}
+	return f
 }
 
 type FileList struct {
-	*File
-	items []interface{}
+	*file
+	items         []interface{}
+	parseCallback FileListCallback
+}
+
+func (s *FileList) append(val interface{}) {
+	s.items = append(s.items, val)
+}
+
+func (s *FileList) parse(src []byte) error {
+	s.parseCallback(src, s.append)
+	return nil
 }
 
 func (s *FileList) Get(index int) (interface{}, error) {
-	if index < 0 || index >= len(s.items) {
-		return nil, errOutOfRange
+	if err := s.update(); err != nil {
+		return nil, err
 	}
 	s.locker.RLock()
-	if check, err := s.checkModified() err != nil {
-		s.locker.RUnlock()
-		return nil, err
-	} else {
-		
+	res := s.items[index]
+	s.locker.RUnlock()
+	return res, nil
+}
+
+func (s *FileList) Len() (int, error) {
+	if err := s.update(); err != nil {
+		return 0, err
 	}
+	s.locker.RLock()
+	l := len(s.items)
+	s.locker.RUnlock()
+	return l, nil
+}
+
+////////////////////////////////////////////////////////////////////////////
+
+func NewFileMap(path string, parseCallback FileMapCallback) *FileMap {
+	f := &FileMap{parseCallback: parseCallback, items: make(map[interface{}]interface{})}
+	f.file = &file{path: path, locker: new(sync.RWMutex), parseMethod: f.parse}
+	return f
+}
+
+type FileMap struct {
+	*file
+	items         map[interface{}]interface{}
+	parseCallback FileMapCallback
+}
+
+func (s *FileMap) append(key, val interface{}) {
+	s.items[key] = val
+}
+
+func (s *FileMap) parse(src []byte) error {
+	s.parseCallback(src, s.append)
+	return nil
+}
+
+func (s *FileMap) Get(key interface{}) (interface{}, bool, error) {
+	if err := s.update(); err != nil {
+		return nil, false, err
+	}
+	s.locker.RLock()
+	res, check := s.items[key]
+	s.locker.RUnlock()
+	return res, check, nil
+}
+
+func (s *FileMap) Len() (int, error) {
+	if err := s.update(); err != nil {
+		return 0, err
+	}
+	s.locker.RLock()
+	l := len(s.items)
+	s.locker.RUnlock()
+	return l, nil
 }
