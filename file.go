@@ -83,6 +83,17 @@ func (s *FileList) Len() (int, error) {
 	return l, nil
 }
 
+func (s *FileList) Range(callback func(int, interface{}) bool) {
+	s.locker.RLock()
+	for i, v := range s.items {
+		if !callback(i, v) {
+			s.locker.RUnlock()
+			return
+		}
+	}
+	s.locker.RUnlock()
+}
+
 ////////////////////////////////////////////////////////////////////////////
 
 func NewFileMap(path string, parseCallback FileMapCallback) *FileMap {
@@ -124,4 +135,15 @@ func (s *FileMap) Len() (int, error) {
 	l := len(s.items)
 	s.locker.RUnlock()
 	return l, nil
+}
+
+func (s *FileMap) Range(callback func(interface{}, interface{}) bool) {
+	s.locker.RLock()
+	for k, v := range s.items {
+		if !callback(k, v) {
+			s.locker.RUnlock()
+			return
+		}
+	}
+	s.locker.RUnlock()
 }
