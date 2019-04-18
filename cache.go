@@ -79,7 +79,8 @@ func (s *cache) Search(method SearchMethod) (res interface{}, check bool) {
 	for i, v := range s.items {
 		obj := v.object
 		if check = method(i, obj); check {
-			res, v.expire = obj, time.Now().Add(s.expired).UnixNano()
+			res = obj
+			atomic.AddInt64(&item.expire, int64(s.expired))
 			s.locker.RUnlock()
 			return
 		}
