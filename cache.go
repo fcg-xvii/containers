@@ -143,7 +143,7 @@ func (s *cache) LockedLoad(key interface{}, callback func() (interface{}, bool))
 func (s *cache) LockedLoadSearch(callSearch SearchMethod, callLoad SearchLoadMethod) (item interface{}, check bool) {
 	s.locker.Lock()
 	for key, val := range s.items {
-		if callSearch(key, val) {
+		if callSearch(key, val.object) {
 			s.locker.Unlock()
 			return val.object, true
 		}
