@@ -11,10 +11,11 @@ type FileListCallback func([]byte, func(interface{})) error
 type FileMapCallback func([]byte, func(interface{}, interface{})) error
 
 type file struct {
-	path        string
-	modified    int64
-	locker      *sync.RWMutex
-	parseMethod func([]byte) error
+	path                string
+	modified            int64
+	locker              *sync.RWMutex
+	parseMethod         func([]byte) error
+	updatePrepareMethod func()
 }
 
 func (s *file) update() error {
@@ -28,6 +29,7 @@ func (s *file) update() error {
 			s.locker.Unlock()
 			return nil
 		}
+		s.updatePrepareMethod()
 		var src []byte
 		if src, err = ioutil.ReadFile(s.path); err == nil {
 			if err = s.parseMethod(src); err == nil {
@@ -44,7 +46,7 @@ func (s *file) update() error {
 
 func NewFileList(path string, parseCallback FileListCallback) *FileList {
 	f := &FileList{parseCallback: parseCallback}
-	f.file = &file{path: path, locker: new(sync.RWMutex), parseMethod: f.parse}
+	f.file = &file{path: path, locker: new(sync.RWMutex), parseMethod: f.parse, updatePrepareMethod: f.updatePrepare}
 	return f
 }
 
@@ -52,6 +54,10 @@ type FileList struct {
 	*file
 	items         []interface{}
 	parseCallback FileListCallback
+}
+
+func (s *FileList) updatePrepare() {
+	s.items = nil
 }
 
 func (s *FileList) append(val interface{}) {
@@ -84,6 +90,9 @@ func (s *FileList) Len() (int, error) {
 }
 
 func (s *FileList) Range(callback func(int, interface{}) bool) {
+	if err := s.update(); err != nil {
+		return
+	}
 	s.locker.RLock()
 	for i, v := range s.items {
 		if !callback(i, v) {
@@ -98,7 +107,7 @@ func (s *FileList) Range(callback func(int, interface{}) bool) {
 
 func NewFileMap(path string, parseCallback FileMapCallback) *FileMap {
 	f := &FileMap{parseCallback: parseCallback, items: make(map[interface{}]interface{})}
-	f.file = &file{path: path, locker: new(sync.RWMutex), parseMethod: f.parse}
+	f.file = &file{path: path, locker: new(sync.RWMutex), parseMethod: f.parse, updatePrepareMethod: f.updatePrepare}
 	return f
 }
 
@@ -106,6 +115,10 @@ type FileMap struct {
 	*file
 	items         map[interface{}]interface{}
 	parseCallback FileMapCallback
+}
+
+func (s *FileMap) updatePrepare() {
+	s.items = make(map[interface{}]interface{})
 }
 
 func (s *FileMap) append(key, val interface{}) {
@@ -138,6 +151,9 @@ func (s *FileMap) Len() (int, error) {
 }
 
 func (s *FileMap) Range(callback func(interface{}, interface{}) bool) {
+	if err := s.update(); err != nil {
+		return
+	}
 	s.locker.RLock()
 	for k, v := range s.items {
 		if !callback(k, v) {
