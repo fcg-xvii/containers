@@ -150,7 +150,7 @@ func (s *cache) LockedLoadSearch(callSearch SearchMethod, callLoad SearchLoadMet
 	}
 	var key interface{}
 	if key, item = callLoad(); key != nil {
-		s.items[key] = &cacheItem{item, time.Now().Add(s.expired).UnixNano()}
+		s.items[key], check = &cacheItem{item, time.Now().Add(s.expired).UnixNano()}, true
 	}
 	s.locker.Unlock()
 	return
