@@ -80,7 +80,7 @@ func (s *cache) Search(method SearchMethod) (res interface{}, check bool) {
 		obj := v.object
 		if check = method(i, obj); check {
 			res = obj
-			atomic.AddInt64(&item.expire, int64(s.expired))
+			atomic.AddInt64(&v.expire, int64(s.expired))
 			s.locker.RUnlock()
 			return
 		}
