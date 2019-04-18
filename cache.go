@@ -137,6 +137,22 @@ func (s *cache) LockedLoad(key interface{}, callback func() (interface{}, bool))
 	return
 }
 
+func (s *cache) LockedLoadSearch(callSearch func(interface{}, interface{}) bool, callLoad func() (interface{}, interface{}, bool)) (item interface{}, check bool) {
+	s.locker.Lock()
+	for key, val := range s.items {
+		if callSearch(key, val) {
+			s.locker.Unlock()
+			return val.object, true
+		}
+	}
+	var key interface{}
+	if key, item, check = callLoad(); check {
+		s.items[key] = &cacheItem{item, time.Now().Add(s.expired).UnixNano()}
+	}
+	s.locker.Unlock()
+	return
+}
+
 func (s *cache) Delete(key interface{}) {
 	s.locker.Lock()
 	delete(s.items, key)
