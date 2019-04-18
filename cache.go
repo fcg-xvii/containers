@@ -14,7 +14,7 @@ type SearchMethod func(key, item interface{}) bool
 type LockedLoadMethod func(key interface{}, callback func() (interface{}, bool)) (item, check interface{})
 
 // Специфический метод выборки из базы, когда необходимо выбрать элеметн не по его идентификатору, а по другим признакам
-type SearchLoadMethod func() (key interface{}, value interface{}, check bool)
+type SearchLoadMethod func() (key interface{}, value interface{})
 
 // Структура для хранения элементов
 type cacheItem struct {
@@ -149,7 +149,7 @@ func (s *cache) LockedLoadSearch(callSearch SearchMethod, callLoad SearchLoadMet
 		}
 	}
 	var key interface{}
-	if key, item, check = callLoad(); check {
+	if key, item = callLoad(); key != nil {
 		s.items[key] = &cacheItem{item, time.Now().Add(s.expired).UnixNano()}
 	}
 	s.locker.Unlock()
