@@ -23,12 +23,13 @@ type cacheItem struct {
 }
 
 // Конструктор объекта кэша
-func NewCache(cleanInterval, itemExpired time.Duration) *Cache {
+func NewCache(cleanInterval, itemExpired time.Duration, clearPrepare func([]interface{})) *Cache {
 	cache := &Cache{&cache{
 		locker:   new(sync.RWMutex),
 		items:    make(map[interface{}]*cacheItem),
 		interval: cleanInterval, expired: itemExpired,
 		stopCleanerChan: make(chan bool),
+		clearPrepare:    clearPrepare,
 	}}
 	runtime.SetFinalizer(cache, destroyCache)
 	return cache
@@ -47,6 +48,7 @@ type cache struct {
 	interval, expired time.Duration              // Интервал активации клинера и время жизни объекта
 	stopCleanerChan   chan bool                  // Канал для остановки клинера (закрывается в деструкторе)
 	cleanerWork       bool                       // Флаг, указывающий на активность клинера
+	clearPrepare      func([]interface{})        // Пользовательский метод, в который передаются объекты перед удалением
 }
 
 // Установка объекта по ключу
@@ -66,7 +68,9 @@ func (s *cache) Get(key interface{}) (res interface{}, check bool) {
 	var item *cacheItem
 	if item, check = s.items[key]; check {
 		res = item.object
-		atomic.AddInt64(&item.expire, int64(s.expired))
+		if time.Now().Add(s.expired).UnixNano() > item.expire {
+			atomic.AddInt64(&item.expire, int64(s.expired))
+		}
 	}
 	s.locker.RUnlock()
 	return
@@ -80,7 +84,9 @@ func (s *cache) Search(method SearchMethod) (res interface{}, check bool) {
 		obj := v.object
 		if check = method(i, obj); check {
 			res = obj
-			atomic.AddInt64(&v.expire, int64(s.expired))
+			if time.Now().Add(s.expired).UnixNano() > v.expire {
+				atomic.AddInt64(&v.expire, int64(s.expired))
+			}
 			s.locker.RUnlock()
 			return
 		}
@@ -96,9 +102,11 @@ func (s *cache) runCleaner() {
 		select {
 		case <-ticker.C: // По сигналу тикера начинаем удаление устаревших объектов
 			now := time.Now().UnixNano()
+			var removedItems []interface{}
 			s.locker.Lock()
 			for key, v := range s.items {
 				if now > v.expire {
+					removedItems = append(removedItems, v)
 					delete(s.items, key)
 				}
 			}
@@ -107,9 +115,15 @@ func (s *cache) runCleaner() {
 				s.cleanerWork = false
 				ticker.Stop()
 				s.locker.Unlock()
+				if s.clearPrepare != nil && len(removedItems) > 0 {
+					s.clearPrepare(removedItems)
+				}
 				return
 			}
 			s.locker.Unlock()
+			if s.clearPrepare != nil && len(removedItems) > 0 {
+				s.clearPrepare(removedItems)
+			}
 		case <-s.stopCleanerChan: // Деструктор, запущеный сборщиком мусора, закрывает канал, завершаем работу клинера
 			s.cleanerWork = false
 			ticker.Stop()

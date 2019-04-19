@@ -1,6 +1,7 @@
 package containers
 
 import (
+	"log"
 	"testing"
 	"time"
 )
@@ -10,8 +11,14 @@ type cacheStruct struct {
 	name string
 }
 
+func init() {
+	cacher.clearPrepare = func(items []interface{}) {
+		log.Println(items, cacher.items)
+	}
+}
+
 var (
-	cacher       = NewCache(time.Second*10, time.Second*30)
+	cacher       = NewCache(time.Second*10, time.Second*15, nil)
 	listCallback = func(src []byte, store func(interface{})) error {
 		for i := 0; i < 10; i++ {
 			store(i)
@@ -100,6 +107,8 @@ func TestCache(t *testing.T) {
 			cacher.Get("te")
 		}()
 	}
+
+	time.Sleep(time.Second * 600)
 }
 
 func TestFile(t *testing.T) {
