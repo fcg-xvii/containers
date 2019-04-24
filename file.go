@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 )
 
-type FileListCallback func([]byte, func(interface{})) error
+type FileIndexCallback func([]byte, func(interface{})) error
 type FileMapCallback func([]byte, func(interface{}, interface{})) error
 
 type file struct {
@@ -29,7 +29,9 @@ func (s *file) update() error {
 			s.locker.Unlock()
 			return nil
 		}
-		s.updatePrepareMethod()
+		if s.updatePrepareMethod != nil {
+			s.updatePrepareMethod()
+		}
 		var src []byte
 		if src, err = ioutil.ReadFile(s.path); err == nil {
 			if err = s.parseMethod(src); err == nil {
@@ -42,9 +44,36 @@ func (s *file) update() error {
 	return nil
 }
 
+func (s *file) ModifiedTimestamp() int64 {
+	return atomic.LoadInt64(&s.modified)
+}
+
 ////////////////////////////////////////////////////////////////////////////
 
-func NewFileList(path string, parseCallback FileListCallback) *FileList {
+type FileObject struct {
+	*file
+	obj           atomic.Value
+	parseCallback FileIndexCallback
+}
+
+func (s *FileObject) set(val interface{}) {
+	s.obj.Store(val)
+}
+
+func (s *FileObject) Get() (interface{}, error) {
+	if err := s.update(); err != nil {
+		return nil, err
+	}
+	return s.obj.Load(), nil
+}
+
+func (s *FileObject) parse(src []byte) error {
+	return s.parseCallback(src, s.set)
+}
+
+////////////////////////////////////////////////////////////////////////////
+
+func NewFileList(path string, parseCallback FileIndexCallback) *FileList {
 	f := &FileList{parseCallback: parseCallback}
 	f.file = &file{path: path, locker: new(sync.RWMutex), parseMethod: f.parse, updatePrepareMethod: f.updatePrepare}
 	return f
@@ -53,7 +82,7 @@ func NewFileList(path string, parseCallback FileListCallback) *FileList {
 type FileList struct {
 	*file
 	items         []interface{}
-	parseCallback FileListCallback
+	parseCallback FileIndexCallback
 }
 
 func (s *FileList) updatePrepare() {
@@ -65,8 +94,7 @@ func (s *FileList) append(val interface{}) {
 }
 
 func (s *FileList) parse(src []byte) error {
-	s.parseCallback(src, s.append)
-	return nil
+	return s.parseCallback(src, s.append)
 }
 
 func (s *FileList) Get(index int) (interface{}, error) {
