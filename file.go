@@ -50,6 +50,12 @@ func (s *file) ModifiedTimestamp() int64 {
 
 ////////////////////////////////////////////////////////////////////////////
 
+func NewFileObject(path string, parseCallback FileIndexCallback) *FileObject {
+	f := &FileObject{parseCallback: parseCallback}
+	f.file = &file{path: path, locker: new(sync.RWMutex), parseMethod: f.parse, updatePrepareMethod: nil}
+	return f
+}
+
 type FileObject struct {
 	*file
 	obj           atomic.Value
