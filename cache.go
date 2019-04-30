@@ -16,6 +16,9 @@ type LockedLoadMethod func(key interface{}, callback func() (interface{}, bool))
 // Специфический метод выборки из базы, когда необходимо выбрать элеметн не по его идентификатору, а по другим признакам
 type SearchLoadMethod func() (key interface{}, value interface{})
 
+// Шаблон метода инициализации объекта на стороне вызывающего объекта. Используется при необходимости иницилизировать объект, если он отсутствует в хрвнилище.
+type CreateMethod func(key interface{}) (interface{}, bool)
+
 // Структура для хранения элементов
 type cacheItem struct {
 	object interface{} // Исходный объект
@@ -51,20 +54,15 @@ type cache struct {
 	clearPrepare      func([]interface{})        // Пользовательский метод, в который передаются объекты перед удалением
 }
 
-// Установка объекта по ключу
-func (s *cache) Set(key, value interface{}) {
-	s.locker.Lock()
+func (s *cache) set(key, value interface{}) {
 	s.items[key] = &cacheItem{value, time.Now().Add(s.expired).UnixNano()}
 	if !s.cleanerWork {
 		s.cleanerWork = true
 		go s.runCleaner()
 	}
-	s.locker.Unlock()
 }
 
-// Поиск объекта по ключу. Если объект найден, увелививается его "время жизни"
-func (s *cache) Get(key interface{}) (res interface{}, check bool) {
-	s.locker.RLock()
+func (s *cache) get(key interface{}) (res interface{}, check bool) {
 	var item *cacheItem
 	if item, check = s.items[key]; check {
 		res = item.object
@@ -72,7 +70,41 @@ func (s *cache) Get(key interface{}) (res interface{}, check bool) {
 			atomic.AddInt64(&item.expire, int64(s.expired))
 		}
 	}
+	return
+}
+
+// Установка объекта по ключу
+func (s *cache) Set(key, value interface{}) {
+	s.locker.Lock()
+	s.set(key, value)
+	s.locker.Unlock()
+}
+
+// Поиск объекта по ключу. Если объект найден, увелививается его "время жизни"
+func (s *cache) Get(key interface{}) (res interface{}, check bool) {
+	s.locker.RLock()
+	res, check = s.get(key)
 	s.locker.RUnlock()
+	return
+}
+
+// Метод, реализующий инициализацию нового объекта при отсутствии его в хранилище.
+// Если найти объект в хранилище не удалось, будет вызвана callback-функция createCall, в которой
+// необходимо создать объект для хранения и вернуть его (или false вторым аргументом, если инициализация объекта невозможна)
+// Внимание! В момент вызова createCall хранилище заблокировано для других горутин, поэтому
+// рекомендуется выполнять в createCall минимум операций, чтобы как можно скорее вернуть управление объекту хранилища!
+func (s *cache) GetOrCreate(key interface{}, createCall CreateMethod) (res interface{}, check bool) {
+	if res, check = s.Get(key); !check {
+		s.locker.Lock()
+		if res, check = s.get(key); check {
+			s.locker.Unlock()
+			return
+		}
+		if res, check = createCall(key); check {
+			s.set(key, res)
+		}
+		s.locker.Unlock()
+	}
 	return
 }
 
