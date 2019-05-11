@@ -2,6 +2,11 @@ package containers
 
 import "fmt"
 
+// Конструктор стека с указанием предполагаемого размера
+func NewStack(length int) *Stack {
+	return &Stack{make([]interface{}, 0, length)}
+}
+
 // Структура стека
 type Stack struct {
 	list []interface{}
