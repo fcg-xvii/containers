@@ -66,7 +66,7 @@ func (s *cache) get(key interface{}) (res interface{}, check bool) {
 	var item *cacheItem
 	if item, check = s.items[key]; check {
 		res = item.object
-		if time.Now().Add(s.expired).UnixNano() > item.expire {
+		if time.Now().Add(s.expired).UnixNano() > atomic.LoadInt64(&item.expire) {
 			atomic.AddInt64(&item.expire, int64(s.expired))
 		}
 	}
