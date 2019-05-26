@@ -17,7 +17,7 @@ type LockedLoadMethod func(key interface{}, callback func() (interface{}, bool))
 type SearchLoadMethod func() (key interface{}, value interface{})
 
 // Шаблон метода инициализации объекта на стороне вызывающего объекта. Используется при необходимости иницилизировать объект, если он отсутствует в хрвнилище.
-type CreateMethod func(key interface{}) (interface{}, bool)
+type CreateMethod func(key interface{}, setCall func(interface{}, interface{}), deleteCall func(interface{})) (interface{}, bool)
 
 // Структура для хранения элементов
 type cacheItem struct {
@@ -100,7 +100,7 @@ func (s *cache) GetOrCreate(key interface{}, createCall CreateMethod) (res inter
 			s.locker.Unlock()
 			return
 		}
-		if res, check = createCall(key); check {
+		if res, check = createCall(key, s.set, s.delete); check {
 			s.set(key, res)
 		}
 		s.locker.Unlock()
@@ -203,9 +203,13 @@ func (s *cache) LockedLoadSearch(callSearch SearchMethod, callLoad SearchLoadMet
 	return
 }
 
+func (s *cache) delete(key interface{}) {
+	delete(s.items, key)
+}
+
 func (s *cache) Delete(key interface{}) {
 	s.locker.Lock()
-	delete(s.items, key)
+	s.delete(key)
 	s.locker.Unlock()
 }
 
