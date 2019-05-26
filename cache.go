@@ -11,7 +11,7 @@ import (
 type SearchMethod func(key, item interface{}) bool
 
 // Шаблон функции для случаев, когда необходимо установить объект кэша, при этом быть уверенным, что его в карте нет
-type LockedLoadMethod func(key interface{}, callback func() (interface{}, bool)) (item, check interface{})
+type LockedLoadMethod func(key interface{}, calls CacheCallBacks) (item, check interface{})
 
 // Специфический метод выборки из базы, когда необходимо выбрать элеметн не по его идентификатору, а по другим признакам
 type SearchLoadMethod func() (key interface{}, value interface{})
