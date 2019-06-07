@@ -178,7 +178,7 @@ func (s *cache) Len() int {
 	return res
 }
 
-func (s *cache) LockedLoad(callback func(CacheCallBacks) (interface{}, bool)) (item interface{}, check bool) {
+func (s *cache) LockedLoad(key interface{}, callback func(CacheCallBacks) (interface{}, bool)) (item interface{}, check bool) {
 	s.locker.Lock()
 	if item, check = callback(CacheCallBacks{s.set, s.delete, s.get}); check {
 		s.items[key] = &cacheItem{item, time.Now().Add(s.expired).UnixNano()}
