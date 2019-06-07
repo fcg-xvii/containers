@@ -98,13 +98,13 @@ func TestCache(t *testing.T) {
 	cacher.Set("le", &cacheStruct{11, "elleven"})
 	t.Log(cacher.items)
 	t.Log("Get cache test")
-	t.Log(cacher.Get("ten"))
+	t.Log(cacher.Get("ten", nil))
 	t.Log("Search test")
 	t.Log(searchInCache(10))
 
 	for i := 0; i < 500; i++ {
 		go func() {
-			cacher.Get("te")
+			cacher.Get("te", nil)
 		}()
 	}
 

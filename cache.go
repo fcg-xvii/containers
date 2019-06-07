@@ -19,6 +19,8 @@ type SearchLoadMethod func() (key interface{}, value interface{})
 // Шаблон метода инициализации объекта на стороне вызывающего объекта. Используется при необходимости иницилизировать объект, если он отсутствует в хрвнилище.
 type CreateMethod func(key interface{}, calls CacheCallBacks) (interface{}, bool)
 
+type CheckMethod func(val interface{}) bool
+
 // Структура для хранения элементов
 type cacheItem struct {
 	object interface{} // Исходный объект
@@ -41,7 +43,7 @@ func NewCache(cleanInterval, itemExpired time.Duration, clearPrepare func([]inte
 type CacheCallBacks struct {
 	Set    func(interface{}, interface{})
 	Delete func(interface{})
-	Get    func(interface{}) (interface{}, bool)
+	Get    func(interface{}, CheckMethod) (interface{}, bool)
 }
 
 // Обёртка для рабочей структуры (когда будет удалена ссылка объект, при сборке мусора
@@ -68,9 +70,12 @@ func (s *cache) set(key, value interface{}) {
 	}
 }
 
-func (s *cache) get(key interface{}) (res interface{}, check bool) {
+func (s *cache) get(key interface{}, cCall CheckMethod) (res interface{}, check bool) {
 	var item *cacheItem
 	if item, check = s.items[key]; check {
+		if cCall != nil && !cCall(item.object) {
+			return
+		}
 		res = item.object
 		if time.Now().Add(s.expired).UnixNano() > atomic.LoadInt64(&item.expire) {
 			atomic.AddInt64(&item.expire, int64(s.expired))
@@ -87,9 +92,9 @@ func (s *cache) Set(key, value interface{}) {
 }
 
 // Поиск объекта по ключу. Если объект найден, увелививается его "время жизни"
-func (s *cache) Get(key interface{}) (res interface{}, check bool) {
+func (s *cache) Get(key interface{}, cCall CheckMethod) (res interface{}, check bool) {
 	s.locker.RLock()
-	res, check = s.get(key)
+	res, check = s.get(key, cCall)
 	s.locker.RUnlock()
 	return
 }
@@ -99,10 +104,10 @@ func (s *cache) Get(key interface{}) (res interface{}, check bool) {
 // необходимо создать объект для хранения и вернуть его (или false вторым аргументом, если инициализация объекта невозможна)
 // Внимание! В момент вызова createCall хранилище заблокировано для других горутин, поэтому
 // рекомендуется выполнять в createCall минимум операций, чтобы как можно скорее вернуть управление объекту хранилища!
-func (s *cache) GetOrCreate(key interface{}, createCall CreateMethod) (res interface{}, check bool) {
-	if res, check = s.Get(key); !check {
+func (s *cache) GetOrCreate(key interface{}, cCall CheckMethod, createCall CreateMethod) (res interface{}, check bool) {
+	if res, check = s.Get(key, cCall); !check {
 		s.locker.Lock()
-		if res, check = s.get(key); check {
+		if res, check = s.get(key, cCall); check {
 			s.locker.Unlock()
 			return
 		}
