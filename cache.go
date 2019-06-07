@@ -47,6 +47,16 @@ type cache struct {
 	clearPrepare      func([]interface{})        // Пользовательский метод, в который передаются объекты перед удалением
 }
 
+func (s *cache) Keys() []interface{} {
+	s.locker.RLock()
+	res := make([]interface{}, 0, len(s.items))
+	for key, _ := range s.items {
+		res = append(res, key)
+	}
+	s.locker.RUnlock()
+	return res
+}
+
 func (s *cache) set(key, value interface{}) {
 	s.items[key] = &cacheItem{value, time.Now().Add(s.expired).UnixNano()}
 	if !s.cleanerWork {
