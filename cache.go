@@ -7,17 +7,8 @@ import (
 	"time"
 )
 
-// Шаблон функции для использования при необходимости поиска объекта по отличным от ключа полям
-type SearchMethod func(key, item interface{}) bool
-
-// Шаблон функции для случаев, когда необходимо установить объект кэша, при этом быть уверенным, что его в карте нет
-type LockedLoadMethod func(key interface{}, calls CacheCallBacks) (item, check interface{})
-
-// Специфический метод выборки из базы, когда необходимо выбрать элеметн не по его идентификатору, а по другим признакам
-type SearchLoadMethod func() (key interface{}, value interface{})
-
 // Шаблон метода инициализации объекта на стороне вызывающего объекта. Используется при необходимости иницилизировать объект, если он отсутствует в хрвнилище.
-type CreateMethod func(key interface{}, calls CacheCallBacks) (interface{}, bool)
+type CreateMethod func(key interface{}) (interface{}, interface{}, bool)
 
 type CheckMethod func(val interface{}) bool
 
@@ -38,12 +29,6 @@ func NewCache(cleanInterval, itemExpired time.Duration, clearPrepare func([]inte
 	}}
 	runtime.SetFinalizer(cache, destroyCache)
 	return cache
-}
-
-type CacheCallBacks struct {
-	Set    func(interface{}, interface{})
-	Delete func(interface{})
-	Get    func(interface{}, CheckMethod) (interface{}, bool)
 }
 
 // Обёртка для рабочей структуры (когда будет удалена ссылка объект, при сборке мусора
@@ -111,30 +96,11 @@ func (s *cache) GetOrCreate(key interface{}, cCall CheckMethod, createCall Creat
 			s.locker.Unlock()
 			return
 		}
-		if res, check = createCall(key, CacheCallBacks{s.set, s.delete, s.get}); check {
+		if key, res, check = createCall(key); check {
 			s.set(key, res)
 		}
 		s.locker.Unlock()
 	}
-	return
-}
-
-// Поиск объекта по другим признакам, кроме ключа (каким именно, определяется методом - агрументом на вход)
-// "Время жизни" найденного объекта увеличивается.
-func (s *cache) Search(method SearchMethod) (res interface{}, check bool) {
-	s.locker.RLock()
-	for i, v := range s.items {
-		obj := v.object
-		if check = method(i, obj); check {
-			res = obj
-			if time.Now().Add(s.expired).UnixNano() > v.expire {
-				atomic.AddInt64(&v.expire, int64(s.expired))
-			}
-			s.locker.RUnlock()
-			return
-		}
-	}
-	s.locker.RUnlock()
 	return
 }
 
@@ -181,29 +147,6 @@ func (s *cache) Len() int {
 	res := len(s.items)
 	s.locker.RUnlock()
 	return res
-}
-
-func (s *cache) LockedLoad(callback func(CacheCallBacks) (interface{}, bool)) {
-	s.locker.Lock()
-	callback(CacheCallBacks{s.set, s.delete, s.get})
-	s.locker.Unlock()
-	return
-}
-
-func (s *cache) LockedLoadSearch(callSearch SearchMethod, callLoad SearchLoadMethod) (item interface{}, check bool) {
-	s.locker.Lock()
-	for key, val := range s.items {
-		if callSearch(key, val.object) {
-			s.locker.Unlock()
-			return val.object, true
-		}
-	}
-	var key interface{}
-	if key, item = callLoad(); key != nil {
-		s.items[key], check = &cacheItem{item, time.Now().Add(s.expired).UnixNano()}, true
-	}
-	s.locker.Unlock()
-	return
 }
 
 func (s *cache) delete(key interface{}) {

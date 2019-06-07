@@ -76,22 +76,6 @@ func TestStack(t *testing.T) {
 	t.Log(stack.Peek())
 }
 
-func searchInCache(field interface{}) (res interface{}, check bool) {
-	switch field.(type) {
-	case int:
-		id := field.(int)
-		return cacher.Search(func(key, item interface{}) (vCheck bool) {
-			return item.(*cacheStruct).id == id
-		})
-	case string:
-		name := field.(string)
-		return cacher.Search(func(key, item interface{}) (vCheck bool) {
-			return item.(*cacheStruct).name == name
-		})
-	}
-	return
-}
-
 func TestCache(t *testing.T) {
 	t.Log("Set cache test")
 	cacher.Set("te", &cacheStruct{10, "ten"})
@@ -100,7 +84,6 @@ func TestCache(t *testing.T) {
 	t.Log("Get cache test")
 	t.Log(cacher.Get("ten", nil))
 	t.Log("Search test")
-	t.Log(searchInCache(10))
 
 	for i := 0; i < 500; i++ {
 		go func() {
