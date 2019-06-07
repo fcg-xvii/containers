@@ -36,6 +36,7 @@ var (
 )
 
 func TestStack(t *testing.T) {
+
 	t.Log("Test Stack")
 	stack := new(Stack)
 
@@ -77,7 +78,25 @@ func TestStack(t *testing.T) {
 }
 
 func TestCache(t *testing.T) {
-	t.Log("Set cache test")
+	val, check := cacher.GetOrCreate(10, func(val interface{}) bool {
+		log.Println("CHECK")
+		return true
+	}, func(key interface{}) (rKey interface{}, rVal interface{}, rCheck bool) {
+		return 10, "ten", true
+	})
+
+	log.Println("1)", val, check, cacher.Keys())
+
+	val, check = cacher.GetOrCreate(10, func(val interface{}) bool {
+		log.Println("CHECK")
+		return true
+	}, func(key interface{}) (rKey interface{}, rVal interface{}, rCheck bool) {
+		return 10, "ten", true
+	})
+
+	log.Println("2)", val, check)
+
+	/*t.Log("Set cache test")
 	cacher.Set("te", &cacheStruct{10, "ten"})
 	cacher.Set("le", &cacheStruct{11, "elleven"})
 	t.Log(cacher.items)
@@ -89,7 +108,7 @@ func TestCache(t *testing.T) {
 		go func() {
 			cacher.Get("te", nil)
 		}()
-	}
+	}*/
 
 	time.Sleep(time.Second * 600)
 }

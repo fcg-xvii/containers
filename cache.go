@@ -1,6 +1,7 @@
 package containers
 
 import (
+	_ "log"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -69,6 +70,7 @@ func (s *cache) get(key interface{}, cCall CheckMethod) (res interface{}, check 
 	var item *cacheItem
 	if item, check = s.items[key]; check {
 		if cCall != nil && !cCall(item.object) {
+			check = false
 			return
 		}
 		res = item.object
@@ -106,7 +108,9 @@ func (s *cache) GetOrCreate(key interface{}, cCall CheckMethod, createCall Creat
 			s.locker.Unlock()
 			return
 		}
+
 		if key, res, check = createCall(key); check {
+
 			s.set(key, res)
 		}
 		s.locker.Unlock()
