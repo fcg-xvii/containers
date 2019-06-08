@@ -129,7 +129,7 @@ func (s *cache) runCleaner() {
 			s.locker.Lock()
 			for key, v := range s.items {
 				if now > v.expire {
-					removedItems = append(removedItems, v)
+					removedItems = append(removedItems, v.object)
 					delete(s.items, key)
 				}
 			}
