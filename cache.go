@@ -60,7 +60,7 @@ func (s *cache) Keys() []interface{} {
 
 func (s *cache) set(key, value interface{}) {
 	s.items[key] = &cacheItem{value, time.Now().Add(s.expired).UnixNano()}
-	if !s.cleanerWork {
+	if !s.cleanerWork && s.expired > 0 {
 		s.cleanerWork = true
 		go s.runCleaner()
 	}
