@@ -1,0 +1,12 @@
+{
+	"id": 10,
+	"name": "cool name",
+	"value": "first val",
+	"armed": [1, 2, 3, 4, 5],
+	"child": {
+		"id": 11,
+		"name": "child name",
+		"value": "second val",
+		"armed": [9, 8, 7]
+	}
+}

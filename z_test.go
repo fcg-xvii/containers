@@ -1,7 +1,9 @@
 package containers
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"testing"
 	"time"
 )
@@ -95,32 +97,11 @@ func TestCache(t *testing.T) {
 	})
 
 	log.Println("2)", val, check)
-
 	cacher.Set("ok", nil)
-
 	log.Println(cacher.Get("ok", nil))
-
-	/*t.Log("Set cache test")
-	cacher.Set("te", &cacheStruct{10, "ten"})
-	cacher.Set("le", &cacheStruct{11, "elleven"})
-	t.Log(cacher.items)
-	t.Log("Get cache test")
-	t.Log(cacher.Get("ten", nil))
-	t.Log("Search test")
-
-	for i := 0; i < 500; i++ {
-		go func() {
-			cacher.Get("te", nil)
-		}()
-	}*/
-
-	time.Sleep(time.Second * 600)
 }
 
 func TestFile(t *testing.T) {
-	//t.Log(list.Len())
-	//t.Log(f.Len())
-
 	for i := 0; i < 500; i++ {
 		go func() {
 			fileList.Get(1)
@@ -128,6 +109,75 @@ func TestFile(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 	t.Log(fileMap.Len())
+}
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+type TObject struct {
+	id          int
+	name, value string
+	armed       []int
+	child       *TObject
+}
+
+func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
+	_, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	if dec.Current() != JSON_OBJECT {
+		return fmt.Errorf("Expected object, not %v", dec.Current())
+	}
+	el := dec.EmbeddedLevel()
+	for el <= dec.EmbeddedLevel() {
+		t, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		if dec.Current() == JSON_VALUE && dec.IsObjectKey() {
+			var ptr interface{}
+			switch t.(string) {
+			case "id":
+				ptr = &s.id
+			case "name":
+				ptr = &s.name
+			case "value":
+				ptr = &s.value
+			case "armed":
+				ptr = &s.armed
+			case "child":
+				s.child = new(TObject)
+				ptr = s.child
+			}
+			if ptr == nil {
+				if err = dec.Next(); err != nil {
+					return err
+				}
+			} else {
+				if err = dec.Decode(ptr); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+func TestJSON(t *testing.T) {
+	var obj TObject
+	f, err := os.Open("z-json-content.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	dec := InitJSONDecoder(f)
+	if err := obj.DecodeJSON(dec); err != nil {
+		t.Fatal(err)
+	}
+	log.Println(obj)
+	log.Println(*obj.child)
 }
 
 func BenchmarkListFile(b *testing.B) {
