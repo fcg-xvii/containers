@@ -96,6 +96,10 @@ func TestCache(t *testing.T) {
 
 	log.Println("2)", val, check)
 
+	cacher.Set("ok", nil)
+
+	log.Println(cacher.Get("ok", nil))
+
 	/*t.Log("Set cache test")
 	cacher.Set("te", &cacheStruct{10, "ten"})
 	cacher.Set("le", &cacheStruct{11, "elleven"})
