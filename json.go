@@ -1,6 +1,7 @@
 package containers
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 )
@@ -31,6 +32,11 @@ func (s JSONTokenType) String() string {
 
 type JSONObject interface {
 	DecodeJSON(*JSONDecoder) error
+}
+
+func InitJSONDecoderFromSource(src []byte) *JSONDecoder {
+	r := bytes.NewReader(src)
+	return InitJSONDecoder(r)
 }
 
 func InitJSONDecoder(r io.Reader) *JSONDecoder {
