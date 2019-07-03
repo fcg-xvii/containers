@@ -3,6 +3,7 @@ package containers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 )
 
@@ -114,4 +115,34 @@ func (s *JSONDecoder) Decode(v interface{}) error {
 	} else {
 		return s.Decoder.Decode(v)
 	}
+}
+
+func (s *JSONDecoder) DecodeObject(fieldRequest func(string) (interface{}, error)) error {
+	if _, err := s.Token(); err != nil {
+		return err
+	}
+	if s.current != JSON_OBJECT {
+		return fmt.Errorf("Expected object, not %v", s.current)
+	}
+	el := s.EmbeddedLevel()
+	for el <= s.EmbeddedLevel() {
+		t, err := s.Token()
+		if err != nil {
+			return err
+		}
+		if s.Current() == JSON_VALUE && s.IsObjectKey() {
+			if ptr, err := fieldRequest(t.(string)); err != nil {
+				return err
+			} else if ptr != nil {
+				if err = s.Decode(ptr); err != nil {
+					return err
+				}
+			} else {
+				if err = s.Next(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }

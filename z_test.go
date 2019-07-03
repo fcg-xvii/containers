@@ -1,7 +1,7 @@
 package containers
 
 import (
-	"fmt"
+	_ "fmt"
 	"log"
 	"os"
 	"testing"
@@ -120,7 +120,8 @@ type TObject struct {
 	child       *TObject
 }
 
-func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
+// Raw dicode
+/*func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
 	_, err := dec.Token()
 	if err != nil {
 		return err
@@ -161,6 +162,26 @@ func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
 		}
 	}
 	return nil
+}*/
+
+// Object decode
+func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
+	return dec.DecodeObject(func(field string) (ptr interface{}, err error) {
+		switch field {
+		case "id":
+			ptr = &s.id
+		case "name":
+			ptr = &s.name
+		case "value":
+			ptr = &s.value
+		case "armed":
+			ptr = &s.armed
+		case "child":
+			s.child = new(TObject)
+			ptr = s.child
+		}
+		return
+	})
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
