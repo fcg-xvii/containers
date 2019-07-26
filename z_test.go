@@ -117,7 +117,7 @@ type TObject struct {
 	id          int
 	name, value string
 	armed       []int
-	child       *TObject
+	child       []*TObject
 }
 
 // Raw dicode
@@ -166,7 +166,9 @@ type TObject struct {
 
 // Object decode
 func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
+	log.Println(">>>>>>>> TObject :: decode JSON", s)
 	return dec.DecodeObject(func(field string) (ptr interface{}, err error) {
+		log.Println("<<<<<<<<<", field)
 		switch field {
 		case "id":
 			ptr = &s.id
@@ -177,8 +179,7 @@ func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
 		case "armed":
 			ptr = &s.armed
 		case "child":
-			s.child = new(TObject)
-			ptr = s.child
+			ptr = &s.child
 		}
 		return
 	})
@@ -187,18 +188,18 @@ func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 func TestJSON(t *testing.T) {
-	var obj TObject
+	var obj []*TObject
 	f, err := os.Open("z-json-content.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer f.Close()
 	dec := InitJSONDecoder(f)
-	if err := obj.DecodeJSON(dec); err != nil {
+	if err := dec.Decode(&obj); err != nil {
 		t.Fatal(err)
 	}
 	log.Println(obj)
-	log.Println(*obj.child)
+	//log.Println(obj.child[0])
 }
 
 func BenchmarkListFile(b *testing.B) {

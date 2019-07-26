@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 )
 
 type JSONTokenType byte
@@ -49,6 +50,7 @@ func InitJSONDecoder(r io.Reader) *JSONDecoder {
 
 type JSONDecoder struct {
 	*json.Decoder
+	token        json.Token
 	embedded     *Stack
 	current      JSONTokenType
 	objectkey    bool
@@ -86,6 +88,7 @@ func (s *JSONDecoder) Token() (t json.Token, err error) {
 			s.current = JSON_VALUE
 		}
 	}
+	s.token = t
 	return
 }
 
@@ -110,11 +113,51 @@ func (s *JSONDecoder) Next() error {
 }
 
 func (s *JSONDecoder) Decode(v interface{}) error {
-	if jsonObj, check := v.(JSONObject); check {
-		return jsonObj.DecodeJSON(s)
-	} else {
-		return s.Decoder.Decode(v)
+	rVal := reflect.ValueOf(v)
+	if rVal.Kind() == reflect.Ptr {
+		rVal = rVal.Elem()
 	}
+	if rVal.Kind() == reflect.Slice {
+		return s.decodeSlice(&rVal)
+	} else {
+		if jsonObj, check := v.(JSONObject); check {
+			return jsonObj.DecodeJSON(s)
+		} else {
+			return s.Decoder.Decode(v)
+		}
+	}
+}
+
+func (s *JSONDecoder) decodeSlice(sl *reflect.Value) error {
+	if _, err := s.Token(); err != nil {
+		return err
+	}
+	if s.current != JSON_ARRAY {
+		return fmt.Errorf("Expected array, not %T", s.current)
+	}
+	elemType := reflect.TypeOf(sl.Interface()).Elem()
+	for s.More() {
+		if !s.More() {
+			return nil
+		}
+		var rElem reflect.Value
+		if elemType.Kind() == reflect.Ptr {
+			rElem = reflect.New(elemType.Elem())
+		} else {
+			rElem = reflect.New(elemType)
+		}
+
+		rRes := rElem.Interface()
+		if err := s.Decode(rRes); err != nil {
+			return err
+		}
+		if elemType.Kind() == reflect.Ptr {
+			sl.Set(reflect.Append(*sl, reflect.ValueOf(rRes).Convert(elemType)))
+		} else {
+			sl.Set(reflect.Append(*sl, reflect.ValueOf(rRes).Elem()))
+		}
+	}
+	return nil
 }
 
 func (s *JSONDecoder) DecodeObject(fieldRequest func(string) (interface{}, error)) error {
@@ -122,7 +165,7 @@ func (s *JSONDecoder) DecodeObject(fieldRequest func(string) (interface{}, error
 		return err
 	}
 	if s.current != JSON_OBJECT {
-		return fmt.Errorf("Expected object, not %v", s.current)
+		return fmt.Errorf("Expected object, not %T", s.current)
 	}
 	el := s.EmbeddedLevel()
 	for el <= s.EmbeddedLevel() {
