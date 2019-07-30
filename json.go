@@ -112,6 +112,10 @@ func (s *JSONDecoder) Next() error {
 	}
 }
 
+func (s *JSONDecoder) DecodeRaw(v interface{}) error {
+	return s.Decoder.Decode(v)
+}
+
 func (s *JSONDecoder) Decode(v interface{}) error {
 	rVal := reflect.ValueOf(v)
 	if rVal.Kind() == reflect.Ptr {
