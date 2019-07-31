@@ -161,6 +161,11 @@ func (s *JSONDecoder) decodeSlice(sl *reflect.Value) error {
 			sl.Set(reflect.Append(*sl, reflect.ValueOf(rRes).Elem()))
 		}
 	}
+	if _, err := s.Token(); err == nil {
+		if d, check := s.token.(json.Delim); !check || d != ']' {
+			err = fmt.Errorf("JSON parse error :: expected ']', not %v", d)
+		}
+	}
 	return nil
 }
 

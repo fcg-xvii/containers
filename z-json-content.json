@@ -1,13 +1,5 @@
-[ {
-	"id": 10,
-	"name": "cool name",
-	"value": "first val",
-	"armed": [1, 2, 3, 4, 5],
-	"child": [{
-		"id": 12,
-		"name": "cool namedddddd",
-		"value": "first valeeeeddddd",
-		"armed": [9, 8, 7],
-		"okoli": [ "vfvbhdfbhvbdfhd", "vfudvhdfvdhfuuh" ]
-	}]
-} ]
+[ 
+  [ 0, 1, 2 ],
+  [ 1, 2, 3 ],
+  [ 4, 5, 6 ]
+]

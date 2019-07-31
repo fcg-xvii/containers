@@ -188,7 +188,8 @@ func (s *TObject) DecodeJSON(dec *JSONDecoder) error {
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 func TestJSON(t *testing.T) {
-	var obj []*TObject
+	//var obj []*TObject
+	var obj [][]int
 	f, err := os.Open("z-json-content.json")
 	if err != nil {
 		t.Fatal(err)
