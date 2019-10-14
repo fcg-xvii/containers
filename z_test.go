@@ -80,19 +80,25 @@ func TestStack(t *testing.T) {
 }
 
 func TestCache(t *testing.T) {
-	val, check := cacher.GetOrCreate(10, func(key interface{}) (val interface{}, rCheck bool) {
-		return "ten", true
+	val, check := cacher.GetOrCreate(10, func(val interface{}) bool {
+		log.Println("CHECK")
+		return true
+	}, func(key interface{}) (rKey interface{}, rVal interface{}, rCheck bool) {
+		return 10, "ten", true
 	})
 
 	log.Println("1)", val, check, cacher.Keys())
 
-	val, check = cacher.GetOrCreate(10, func(key interface{}) (rVal interface{}, rCheck bool) {
-		return "ten", true
+	val, check = cacher.GetOrCreate(10, func(val interface{}) bool {
+		log.Println("CHECK")
+		return true
+	}, func(key interface{}) (rKey interface{}, rVal interface{}, rCheck bool) {
+		return 10, "ten", true
 	})
 
 	log.Println("2)", val, check)
 	cacher.Set("ok", nil)
-	log.Println(cacher.Get("ok"))
+	log.Println(cacher.Get("ok", nil))
 }
 
 func TestFile(t *testing.T) {
