@@ -118,7 +118,7 @@ func (s *cache) GetOrCreate(key interface{}, cCall CheckMethod, createCall Creat
 	return
 }
 
-func (s *cache) Each(key interface{}, checkCall CheckMethod, createCall CreateMethod) (res interface{}, check bool) {
+func (s *cache) Each(checkCall CheckMethod, createCall CreateMethod) (res interface{}, check bool) {
 	s.locker.Lock()
 	for _, v := range s.items {
 		if checkCall(v.object) {
