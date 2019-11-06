@@ -127,7 +127,7 @@ func (s *cache) Each(key interface{}, checkCall CheckMethod, createCall CreateMe
 	for _, v := range s.items {
 		if checkCall(v.object) {
 			s.locker.Unlock()
-			return v, true
+			return v.object, true
 		}
 	}
 	if createCall != nil {
