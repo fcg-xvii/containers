@@ -86,6 +86,12 @@ func (s *cache) LockedGet(key interface{}, cCall CheckMethod) (res interface{}, 
 	return s.get(key, cCall)
 }
 
+func (s *cache) LockedOperation(method func()) {
+	s.locker.Lock()
+	method()
+	s.locker.Unlock()
+}
+
 // Установка объекта по ключу
 func (s *cache) Set(key, value interface{}) {
 	s.locker.Lock()
